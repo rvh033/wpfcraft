@@ -18,15 +18,16 @@ using wpfcraft.Items;
 using wpfcraft.PlayerData;
 using wpfcraft.Blocks;
 using wpfcraft.Gui.Guis;
+using wpfcraft.Audio;
 
 namespace wpfcraft
 {
-    public partial class MainWindow : Window
+    public partial class WPFCraft : Window
     {
         public long Rendered = 0;
         public long RenderedTotal = 0;
         public int FrameLoop = 0;
-        public string Ver = "0.4.0";
+        public string Ver = "0.5.0";
         public Player Player;
         Stopwatch Timer = new();
         Stopwatch FramerateTimer = new();
@@ -38,7 +39,7 @@ namespace wpfcraft
         GuiIngame GuiIngame;
         event EventHandler BlockTypeSelectionChanged;
 
-        public MainWindow()
+        public WPFCraft()
         {
             InitializeComponent();
             Start();
@@ -52,6 +53,11 @@ namespace wpfcraft
             int screenWidth = (int)SystemParameters.PrimaryScreenWidth;
             int screenHeight = (int)SystemParameters.PrimaryScreenHeight;
             this.fsOptionText.Content = $"This will render WPFCraft at {screenWidth}x{screenHeight}.";
+            GameWindow.Closed += (sender, EventArgs) =>
+            {
+                //DC.RPCClient.Dispose();
+                GameWindow.Close();
+            };
             foreach (UIElement e in uiFSOption.Children)
             {
                 if (e is Button)
@@ -96,11 +102,6 @@ namespace wpfcraft
                 string[] content = ipField.Text.Split(':');
                 this.JoinServer(content[0], Convert.ToInt32(content[1]));
             }
-            else if (btn == openBtn)
-            {
-                string[] content = ipField.Text.Split(':');
-                this.OpenServer(content[0], Convert.ToInt32(content[1]));
-            }
             else
             {
                 uiFSOption.Visibility = Visibility.Hidden;
@@ -120,91 +121,101 @@ namespace wpfcraft
         {
             ++Rendered;
             ++RenderedTotal;
-            if (!Timer.IsRunning)
+            if (GameWindow.IsActive)
             {
-                Timer.Start();
-            }
-            if (!FramerateTimer.IsRunning)
-            {
-                FramerateTimer.Start();
-            }
-            if (this.Server != null)
-            {
-                string s = "";
-                foreach (string[] playerData in this.Server.PlayersToClient)
+                if (!Timer.IsRunning)
                 {
-                    s = s + $"{playerData[0]} ({playerData[1]})\n";
+                    Timer.Start();
                 }
-                this.networkInfo.Content = $"Network\nConnected: {this.Server.Client.Connected}\nPlayers: {this.Server.PlayersToClient.Count}\n\n{s}";
-            }
-            if (FramerateTimer.ElapsedMilliseconds >= 1000)
-            {
-                this.TheProcess = Process.GetCurrentProcess();
-                if (TheProcess.PrivateMemorySize64 / (1024 * 1024) > 1000)
+                if (!FramerateTimer.IsRunning)
                 {
-                    Stop(null, "Memory usage has exceeded the limit of 1000 MB.", "My programming skills");
+                    FramerateTimer.Start();
                 }
-                onScreenText.Content = $"WPFCraft {Ver} ({Rendered} fps, {TheProcess.PrivateMemorySize64 / (1024 * 1024)} MB of memory used)";
-                Rendered = 0;
-                UnloadOldestChunk();
-                AskNewChunk();
-                FramerateTimer.Restart();
                 if (this.Server != null)
                 {
+                    string s = "";
                     foreach (string[] playerData in this.Server.PlayersToClient)
                     {
-                        string name = playerData[0];
-                        ulong id = Convert.ToUInt64(playerData[1]);
-                        double x = Convert.ToDouble(playerData[2]);
-                        double y = Convert.ToDouble(playerData[3]);
-                        foreach(Player p in this.entities.Children)
+                        s = s + $"{playerData[0]} ({playerData[1]})\n";
+                    }
+                    this.networkInfo.Content = $"Network\nConnected: {this.Server.Client.Connected}\nPlayers: {this.Server.PlayersToClient.Count}\n\n{s}";
+                }
+                if (FramerateTimer.ElapsedMilliseconds >= 1000)
+                {
+                    this.TheProcess = Process.GetCurrentProcess();
+                    if (TheProcess.PrivateMemorySize64 / (1024 * 1024) > 1000)
+                    {
+                        Stop(null, "Memory usage has exceeded the limit of 1000 MB.", "My programming skills");
+                    }
+                    onScreenText.Content = $"WPFCraft {Ver} ({Rendered} fps, {TheProcess.PrivateMemorySize64 / (1024 * 1024)} MB of memory used)";
+                    Rendered = 0;
+                    UnloadOldestChunk();
+                    AskNewChunk();
+                    FramerateTimer.Restart();
+                    if (this.Server != null)
+                    {
+                        foreach (string[] playerData in this.Server.PlayersToClient)
                         {
-                            if (p.Id != id)
+                            string name = playerData[0];
+                            ulong id = Convert.ToUInt64(playerData[1]);
+                            double x = Convert.ToDouble(playerData[2]);
+                            double y = Convert.ToDouble(playerData[3]);
+                            foreach (Player p in this.entities.Children)
                             {
-                                if (id != this.Player.Id)
+                                if (p.Id != id)
                                 {
-                                    Player player = new Player(name, id);
-                                    player.SetPos(x, y);
-                                    this.entities.Children.Add(player);
-                                    break;
+                                    if (id != this.Player.Id)
+                                    {
+                                        Player player = new Player(name, id);
+                                        player.SetPos(x, y);
+                                        this.entities.Children.Add(player);
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            if (Timer.ElapsedMilliseconds >= 10)
-            {
-                this.Player.PrevY = this.Player.Y;
-                this.GuiIngame.Update(Player);
-                ++FrameLoop;
-                playerInfo.Content = $"Player:\n{this.Player.Name}\n{this.Player.X}\n{this.Player.Y}\n{this.Player.InitCalls}\nIsJumping: {this.Player.IsJumping}\nIsFalling: {this.Player.IsFalling}";
-                if (Keyboard.IsKeyDown(Key.A))
+                if (Timer.ElapsedMilliseconds >= 10)
                 {
-                    this.Player.SetX(this.Player.X -= 0.1);
-                }
-                if (Keyboard.IsKeyDown(Key.D))
-                {
-                    this.Player.SetX(this.Player.X += 0.1);
-                }
-                if (Keyboard.IsKeyDown(Key.Space))
-                {
-                    if (!this.Player.IsJumping && !this.Player.IsFalling)
+                    this.Player.PrevY = this.Player.Y;
+                    this.GuiIngame.Update(Player);
+                    ++FrameLoop;
+                    playerInfo.Content = $"Player:\n{this.Player.Name}\n{this.Player.X}\n{this.Player.Y}\n{this.Player.InitCalls}\nIsJumping: {this.Player.IsJumping}\nIsFalling: {this.Player.IsFalling}";
+                    if (Keyboard.IsKeyDown(Key.A))
                     {
-                        this.Player.MovementY = 0.075;
-                        this.Player.StartJumpY = Player.Y;
-                        this.Player.IsJumping = true;
+                        this.Player.SetX(this.Player.X -= 0.1);
                     }
+                    if (Keyboard.IsKeyDown(Key.D))
+                    {
+                        this.Player.SetX(this.Player.X += 0.1);
+                    }
+                    if (Keyboard.IsKeyDown(Key.Space))
+                    {
+                        if (!this.Player.IsJumping && !this.Player.IsFalling)
+                        {
+                            this.Player.MovementY = 0.075;
+                            this.Player.StartJumpY = Player.Y;
+                            this.Player.IsJumping = true;
+                        }
+                    }
+                    if (FrameLoop >= 100)
+                    {
+                        FrameLoop = 0;
+                    }
+                    camera.ScrollToHorizontalOffset(Player.X * 48 - 400 + Player.Width / 2 * 48);
+                    camera.ScrollToVerticalOffset(Player.Y * 48 - 200 + Player.Height / 2 * 48);
+                    HandlePlayerMovement(this.Player);
+                    if (Player.PrevX != Player.X || Player.PrevY != Player.Y)
+                    {
+                        if (this.Server != null && Server.IsReady)
+                        {
+                            this.Server.Client.Client.Send(this.Server.BuildPacketPlayerPos(100, $"{this.Player.Id}:{this.Player.X}:{this.Player.Y}"));
+                        }
+                    }
+                    this.Player.PrevY = Player.Y;
+                    Timer.Restart();
                 }
-                if (FrameLoop >= 100)
-                {
-                    FrameLoop = 0;
-                }
-                camera.ScrollToHorizontalOffset(Player.X * 48 - 400 + Player.Width / 2 * 48);
-                camera.ScrollToVerticalOffset(Player.Y * 48 - 200 + Player.Height / 2 * 48);
-                HandlePlayerMovement(this.Player);
-                this.Player.PrevY = Player.Y;
-                Timer.Restart();
             }
         }
 
@@ -217,6 +228,10 @@ namespace wpfcraft
             if (Keyboard.IsKeyDown(Key.F5))
             {
                 this.Player.SetX(1073741824);
+            }
+            if (Keyboard.IsKeyDown(Key.F4))
+            {
+                AudioEngine.Play("Intercom.ogg");
             }
             if (Keyboard.IsKeyDown(Key.Escape))
             {
@@ -279,10 +294,6 @@ namespace wpfcraft
                             }
                         }
                     }
-                }
-                if (this.Server != null)
-                {
-                    this.Server.Client.Client.Send(this.Server.BuildPacketPlayerPos(100, $"{this.Player.Id}:{this.Player.X}:{this.Player.Y}"));
                 }
             }
             player.PrevX = this.Player.X;
@@ -549,11 +560,6 @@ namespace wpfcraft
             this.uiMultiplayer.Visibility = Visibility.Hidden;
             this.Server = new Server(this, Player, false, ip, port);
             this.Server.ConnectToServer(ip, port);
-        }
-
-        void OpenServer(string ip, int port)
-        {
-            this.InternalServer = new Server(null, null, true, ip, port);
         }
 
         public void PlayerMPPosUpdated(ulong id, double x, double y)

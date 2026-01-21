@@ -16,7 +16,7 @@ namespace wpfcraft
 {
     internal class Server
     {
-        public Server(MainWindow main, Player player, bool isInternal, string ip, int port)
+        public Server(WPFCraft main, Player player, bool isInternal, string ip, int port)
         {
             this.Player = player;
             if (isInternal)
@@ -35,7 +35,7 @@ namespace wpfcraft
             Init();
         }
 
-        MainWindow Main;
+        WPFCraft Main;
         Player Player;
         public TcpClient Client;
         public TcpListener Listener;
@@ -46,6 +46,8 @@ namespace wpfcraft
         Random Rand = new Random();
         string IP;
         int Port;
+        int Pvn = 1;
+        public bool IsReady = true;
 
         void Init()
         {
@@ -78,7 +80,7 @@ namespace wpfcraft
 
         byte[] BuildPacketConnecting(byte type, string s)
         {
-            string s1 = $"{type}-{s}";
+            string s1 = $"{Pvn}/{type}/{s}";
             PBuilderMemoryStream = new MemoryStream();
             PBuilderMemoryStream.WriteByte(type);
             int length = s1.Length;
@@ -98,7 +100,7 @@ namespace wpfcraft
 
         public byte[] BuildPacketPlayerPos(byte type, string ixy)
         {
-            string s = $"{type}-{ixy}";
+            string s = $"{Pvn}/{type}/{ixy}";
             PBuilderMemoryStream = new MemoryStream();
             PBuilderMemoryStream.WriteByte(type);
             int length = s.Length;
@@ -183,42 +185,56 @@ namespace wpfcraft
             {
                 while (true)
                 {
-                    byte t = PReader.ReadByte();
-                    Debug.WriteLine($"Packet type: {t}");
-                    string packet = PReader.ReadPacket();
-                    string[] packetContent = packet.Split('-');
-                    Debug.WriteLine($"Packet content: {packet}");
-                    int type = Convert.ToInt32(packetContent[0]);
-                    switch (type)
+                    try
                     {
-                        case 0:
-                            Debug.WriteLine("Connection was made");
-                            string s = packetContent[1];
-                            string[] split = packetContent[1].Split(':');
-                            string name = split[0];
-                            ulong id = Convert.ToUInt64(split[1]);
-                            string[] playerData = new string[4];
-                            playerData[0] = name;
-                            playerData[1] = id.ToString();
-                            playerData[2] = "0";
-                            playerData[3] = "0";
-                            this.PlayersToClient.Add(playerData);
-                            break;
-                        case 1:
-                            break;
-                        case 2:
-                            break;
-                        case 100:
-                            string posPacket = packetContent[1];
-                            string[] posPacketSplit = packetContent[1].Split(':');
-                            ulong pid = Convert.ToUInt64(posPacketSplit[0]);
-                            double x = Convert.ToDouble(posPacketSplit[1]);
-                            double y = Convert.ToDouble(posPacketSplit[2]);
-                            this.Main.Dispatcher.Invoke(() =>
-                            {
-                                this.Main.PlayerMPPosUpdated(pid, x, y);
-                            });
-                            break;
+                        byte t = PReader.ReadByte();
+                        Debug.WriteLine($"Packet type: {t}");
+                        string packet = PReader.ReadPacket();
+                        int pvn = Convert.ToInt32(packet.Split('/')[0]);
+                        if (pvn != Pvn)
+                        {
+                            Client.Close();
+                        }
+                        string[] packetContent = packet.Split('/');
+                        Debug.WriteLine($"Packet content: {packet}");
+                        int type = Convert.ToInt32(packetContent[1]);
+                        switch (type)
+                        {
+                            case 0:
+                                Debug.WriteLine("Connection was made");
+                                string s = packetContent[2];
+                                string[] split = packetContent[2].Split(':');
+                                string name = split[0];
+                                ulong id = Convert.ToUInt64(split[1]);
+                                string[] playerData = new string[4];
+                                playerData[0] = name;
+                                playerData[1] = id.ToString();
+                                playerData[2] = "0";
+                                playerData[3] = "0";
+                                this.PlayersToClient.Add(playerData);
+                                break;
+                            case 1:
+                                break;
+                            case 2:
+                                break;
+                            case 100:
+                                string posPacket = packetContent[2];
+                                string[] posPacketSplit = packetContent[2].Split(':');
+                                ulong pid = Convert.ToUInt64(posPacketSplit[0]);
+                                double x = Convert.ToDouble(posPacketSplit[1]);
+                                double y = Convert.ToDouble(posPacketSplit[2]);
+                                this.Main.Dispatcher.Invoke(() =>
+                                {
+                                    this.Main.PlayerMPPosUpdated(pid, x, y);
+                                });
+                                break;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Client.Close();
+                        IsReady = false;
+                        Debug.WriteLine($"The connection has been terminated\n{ex.Message}");
                     }
                 }
             });

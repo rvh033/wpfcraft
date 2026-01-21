@@ -19,7 +19,7 @@ namespace wpfcraft.Animations
             Duration = new Duration(TimeSpan.FromSeconds(0.5));
         }
 
-        public void Stop(MainWindow main, EventArgs e)
+        public void Stop(WPFCraft main, EventArgs e)
         {
             DoubleAnimation end = new();
             end.From = main.selectionBox.Opacity;

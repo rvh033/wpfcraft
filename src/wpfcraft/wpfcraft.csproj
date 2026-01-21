@@ -17,11 +17,24 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="NAudio" Version="2.2.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="Texture\Block\1.png" />
     <Resource Include="Texture\Block\10000.png" />
     <Resource Include="Texture\Block\2.png" />
     <Resource Include="Texture\Block\3.png" />
     <Resource Include="Texture\MissingTex.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Sound\Intercom.ogg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Sound\SoundTest.ogg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

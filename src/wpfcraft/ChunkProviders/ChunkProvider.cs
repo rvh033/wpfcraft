@@ -10,9 +10,9 @@ namespace wpfcraft.ChunkProviders
     internal class ChunkProvider
     {
 
-        MainWindow Main;
+        WPFCraft Main;
 
-        public ChunkProvider(MainWindow main)
+        public ChunkProvider(WPFCraft main)
         {
             Main = main;
         }

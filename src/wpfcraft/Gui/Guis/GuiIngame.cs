@@ -18,7 +18,7 @@ namespace wpfcraft.Gui.Guis
 
         public GuiHotbar Hotbar;
 
-        public GuiIngame(MainWindow main)
+        public GuiIngame(WPFCraft main)
         {
             SetLeft(this, 0);
             SetTop(this, 0);

@@ -62,7 +62,7 @@ namespace wpfcraft.PlayerData
             X = x;
             Y = y;
             SetLeft(this, X);
-            SetTop(this, X);
+            SetTop(this, Y);
         }
 
         public void SetX(double x)
