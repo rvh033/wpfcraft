@@ -27,7 +27,7 @@ namespace wpfcraft
         public long Rendered = 0;
         public long RenderedTotal = 0;
         public int FrameLoop = 0;
-        public string Ver = "0.5.0";
+        public string Ver = "0.6.0";
         public Player Player;
         Stopwatch Timer = new();
         Stopwatch FramerateTimer = new();
@@ -55,7 +55,6 @@ namespace wpfcraft
             this.fsOptionText.Content = $"This will render WPFCraft at {screenWidth}x{screenHeight}.";
             GameWindow.Closed += (sender, EventArgs) =>
             {
-                //DC.RPCClient.Dispose();
                 GameWindow.Close();
             };
             foreach (UIElement e in uiFSOption.Children)
@@ -410,17 +409,31 @@ namespace wpfcraft
                             {
                                 blockChunk.Children.Remove(block);
                                 ItemBuildingBlock newBlock = (ItemBuildingBlock)Player.Inventory.HotbarEntries[GuiIngame.Hotbar.Selection].Item;
-                                Block replace = null;
+                                Block replace = new(newBlock.Block.Id);
                                 switch(newBlock.Block.Id)
                                 {
                                     case < 10000:
                                         {
-                                            replace = new(newBlock.Block.Id);
+                                            replace.SetPos(block.X, block.Y);
+                                            foreach (Block b in blockChunk.Children)
+                                            {
+                                                if (b.X == replace.X && b.Y == replace.Y + 1 && b.Id == 1 && replace.Id != 6)
+                                                {
+                                                    blockChunk.Children.Remove(b);
+                                                    Block newDirt = new(2);
+                                                    newDirt.MouseEnter += (sender, EventArgs) => BlockTouched(newDirt, 0, EventArgs);
+                                                    newDirt.MouseDown += (sender, EventArgs) => BlockTouched(newDirt, 1, EventArgs);
+                                                    newDirt.SetPos(b.X, b.Y);
+                                                    blockChunk.Children.Add(newDirt);
+                                                    break;
+                                                }
+                                            }
                                             break;
                                         }
                                     case 10000:
                                         {
                                             replace = new BlockChest(newBlock.Block.Id);
+                                            replace.SetPos(block.X, block.Y);
                                             for (int i = 0; i < 27; i++)
                                             {
                                                 ItemBuildingBlock item = new ItemBuildingBlock(Rand.Next(0, 7));
@@ -430,7 +443,6 @@ namespace wpfcraft
                                             break;
                                         }
                                 }
-                                replace.SetPos(block.X, block.Y);
                                 replace.MouseEnter += (sender, EventArgs) => BlockTouched(replace, 0, EventArgs);
                                 replace.MouseDown += (sender, EventArgs) => BlockTouched(replace, 1, EventArgs);
                                 blockChunk.Children.Add(replace);
@@ -572,12 +584,6 @@ namespace wpfcraft
                     break;
                 }
             }
-        }
-
-        void Print(string text)
-        {
-            Console.WriteLine(text);
-            Debug.WriteLine(text);
         }
     }
 }
