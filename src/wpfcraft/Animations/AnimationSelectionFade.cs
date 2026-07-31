@@ -22,10 +22,10 @@ namespace wpfcraft.Animations
         public void Stop(WPFCraft main, EventArgs e)
         {
             DoubleAnimation end = new();
-            end.From = main.selectionBox.Opacity;
+            end.From = main.TheWorld.ScaledOverlay.SelectionBox.Opacity;
             end.To = 1;
             Duration = new Duration(TimeSpan.FromSeconds(0.5));
-            main.selectionBox.BeginAnimation(System.Windows.UIElement.OpacityProperty, end);
+            main.TheWorld.ScaledOverlay.SelectionBox.BeginAnimation(System.Windows.UIElement.OpacityProperty, end);
         }
     }
 }

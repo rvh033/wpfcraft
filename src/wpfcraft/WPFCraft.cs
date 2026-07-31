@@ -1,4 +1,6 @@
-﻿using System.Text;
+﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -8,17 +10,16 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using wpfcraft.ChunkProviders;
 using wpfcraft.Animations;
-using wpfcraft.Gui;
-using wpfcraft.Items.Containers;
-using wpfcraft.Items;
-using wpfcraft.PlayerData;
-using wpfcraft.Blocks;
-using wpfcraft.Gui.Guis;
 using wpfcraft.Audio;
+using wpfcraft.Blocks;
+using wpfcraft.ChunkProviders;
+using wpfcraft.Graphics;
+using wpfcraft.Gui;
+using wpfcraft.Gui.Guis;
+using wpfcraft.Items;
+using wpfcraft.Items.Containers;
+using wpfcraft.PlayerData;
 
 namespace wpfcraft
 {
@@ -27,7 +28,7 @@ namespace wpfcraft
         public long Rendered = 0;
         public long RenderedTotal = 0;
         public int FrameLoop = 0;
-        public string Ver = "0.6.0";
+        public string Ver = "0.7.0";
         public Player Player;
         Stopwatch Timer = new();
         Stopwatch FramerateTimer = new();
@@ -37,46 +38,17 @@ namespace wpfcraft
         Server InternalServer;
         ChunkProvider ChunkProvider;
         GuiIngame GuiIngame;
+        public World TheWorld;
+        public List<Graphic> GraphicsList = new List<Graphic>();
         event EventHandler BlockTypeSelectionChanged;
 
         public WPFCraft()
         {
             InitializeComponent();
-            Start();
-            ChunkProvider = new(this);
-            CompositionTarget.Rendering += OnRender;
-            MouseWheel += OnScroll;
-            this.world.RenderTransform = new ScaleTransform(48, 48);
-            double scale = this.Width * 0.00125;
-            this.SizeChanged += ScaleWindow;
-            this.Title = $"WPFCraft {Ver}";
-            int screenWidth = (int)SystemParameters.PrimaryScreenWidth;
-            int screenHeight = (int)SystemParameters.PrimaryScreenHeight;
-            this.fsOptionText.Content = $"This will render WPFCraft at {screenWidth}x{screenHeight}.";
-            GameWindow.Closed += (sender, EventArgs) =>
+            windowGrid.Loaded += (sender, EventArgs) =>
             {
-                GameWindow.Close();
+                Start();
             };
-            foreach (UIElement e in uiFSOption.Children)
-            {
-                if (e is Button)
-                {
-                    Button btn = (Button)e;
-                    btn.Click += HandleButton;
-                }
-            }
-            foreach (UIElement e in uiMultiplayer.Children)
-            {
-                if (e is Button)
-                {
-                    Button btn = (Button)e;
-                    btn.Click += HandleButton;
-                }
-            }
-            foreach (Canvas c in windowGrid.Children)
-            {
-                c.RenderTransform = new ScaleTransform(scale, scale);
-            }
         }
 
         private void HandleButton(object sender, RoutedEventArgs e)
@@ -159,7 +131,7 @@ namespace wpfcraft
                             ulong id = Convert.ToUInt64(playerData[1]);
                             double x = Convert.ToDouble(playerData[2]);
                             double y = Convert.ToDouble(playerData[3]);
-                            foreach (Player p in this.entities.Children)
+                            foreach (Player p in TheWorld.Entities.Children)
                             {
                                 if (p.Id != id)
                                 {
@@ -167,7 +139,7 @@ namespace wpfcraft
                                     {
                                         Player player = new Player(name, id);
                                         player.SetPos(x, y);
-                                        this.entities.Children.Add(player);
+                                        TheWorld.Entities.Children.Add(player);
                                         break;
                                     }
                                 }
@@ -180,7 +152,7 @@ namespace wpfcraft
                     this.Player.PrevY = this.Player.Y;
                     this.GuiIngame.Update(Player);
                     ++FrameLoop;
-                    playerInfo.Content = $"Player:\n{this.Player.Name}\n{this.Player.X}\n{this.Player.Y}\n{this.Player.InitCalls}\nIsJumping: {this.Player.IsJumping}\nIsFalling: {this.Player.IsFalling}";
+                    playerInfo.Content = $"Player:\n{this.Player.Name}\n{this.Player.X}\n{this.Player.Y}\n{this.Player.InitCalls}\nIsJumping: {this.Player.IsJumping}\nIsFalling: {this.Player.IsFalling}\n\nDayTime: {World.WorldTimer.DayTime}\nDayOfWeek: {World.DayOfWeek}\nWorldDarkness: {World.WorldDarkness}\nPrevWorldDarkness: {World.PrevWorldDarkness}";
                     if (Keyboard.IsKeyDown(Key.A))
                     {
                         this.Player.SetX(this.Player.X -= 0.1);
@@ -218,19 +190,56 @@ namespace wpfcraft
             }
         }
 
+        async void UpdateLoop()
+        {
+            await Task.Run(async () =>
+            {
+                while (true)
+                {
+                    await Task.Delay(1000);
+                    Dispatcher.Invoke(() =>
+                    {
+                        foreach (Graphic g in GraphicsList)
+                        {
+                            if (!Background.Children.Contains(g))
+                            {
+                                Debug.WriteLine("Missing graphic added");
+                                Background.Children.Add(g);
+                            }
+                        }
+                        foreach (Graphic g in Background.Children)
+                        {
+                            if (!GraphicsList.Contains(g))
+                            {
+                                Background.Children.Remove(g);
+                            }
+                        }
+                    });
+                }
+            });
+        }
+
         private void KeyPressed(object sender, KeyEventArgs e)
         {
+            if (Keyboard.IsKeyDown(Key.F7))
+            {
+                World.WorldTimer.WorldTime = long.MaxValue - 100;
+            }
             if (Keyboard.IsKeyDown(Key.F6))
             {
                 this.Player.Inventory.AddItemToHotbar(new ItemBuildingBlock(10000), 8, 10);
             }
             if (Keyboard.IsKeyDown(Key.F5))
             {
-                this.Player.SetX(1073741824);
+                World.WorldTimer.WorldTime = 0;
             }
             if (Keyboard.IsKeyDown(Key.F4))
             {
                 AudioEngine.Play("Intercom.ogg");
+            }
+            if (Keyboard.IsKeyDown(Key.F3))
+            {
+                World.WorldTimer.WorldTime += 100;
             }
             if (Keyboard.IsKeyDown(Key.Escape))
             {
@@ -262,10 +271,54 @@ namespace wpfcraft
 
         void Start()
         {
+            ChunkProvider = new(this);
+            CompositionTarget.Rendering += OnRender;
+            MouseWheel += OnScroll;
+            double scale = this.Width * 0.00125;
+            this.SizeChanged += ScaleWindow;
+            this.Title = $"WPFCraft {Ver}";
+            int screenWidth = (int)SystemParameters.PrimaryScreenWidth;
+            int screenHeight = (int)SystemParameters.PrimaryScreenHeight;
+            this.fsOptionText.Content = $"This will render WPFCraft at {screenWidth}x{screenHeight}.";
+            GameWindow.Closed += (sender, EventArgs) =>
+            {
+                GameWindow.Close();
+            };
+            foreach (UIElement e in uiFSOption.Children)
+            {
+                if (e is Button)
+                {
+                    Button btn = (Button)e;
+                    btn.Click += HandleButton;
+                }
+            }
+            foreach (UIElement e in uiMultiplayer.Children)
+            {
+                if (e is Button)
+                {
+                    Button btn = (Button)e;
+                    btn.Click += HandleButton;
+                }
+            }
+            foreach (Canvas c in windowGrid.Children)
+            {
+                if (windowGrid.Children.IndexOf(c) != 0)
+                {
+                    c.RenderTransform = new ScaleTransform(scale, scale);
+                }
+            }
+
+            TheWorld = new();
+            TheWorld.RenderTransform = new ScaleTransform(48, 48);
+            camera.Content = TheWorld;
             CreatePlayer($"Player{Rand.Next(0, 1000)}", (ulong)Rand.NextInt64());
             GuiIngame GuiIngame = new GuiIngame(this);
             this.GuiIngame = GuiIngame;
             windowGrid.Children.Add(this.GuiIngame);
+            GraphicsList.Add(new GraphicSky());
+            GraphicsList.Add(new GraphicSunLow());
+            GraphicsList.Add(new GraphicSunMoon());
+            UpdateLoop();
         }
 
         void HandlePlayerMovement(Player player)
@@ -274,7 +327,7 @@ namespace wpfcraft
             if (player.PrevX != player.X && !player.IsJumping)
             {
                 player.IsFalling = true;
-                foreach (Chunk chunk in chunks.Children)
+                foreach (Chunk chunk in TheWorld.Chunks.Children)
                 {
                     double chunkX = Canvas.GetLeft(chunk);
                     if (player.CollisionX >= chunkX && player.CollisionX < chunkX + 16)
@@ -305,7 +358,7 @@ namespace wpfcraft
             {
                 player.MovementY += 0.002;
                 player.SetY(player.Y += player.MovementY);
-                foreach (Canvas chunk in chunks.Children)
+                foreach (Canvas chunk in TheWorld.Chunks.Children)
                 {
                     double chunkX = Canvas.GetLeft(chunk);
                     if (player.CollisionX >= chunkX && player.CollisionX < chunkX + 16)
@@ -351,7 +404,7 @@ namespace wpfcraft
             this.Player = player;
             Canvas.SetLeft(this.Player, this.Player.X);
             Canvas.SetTop(this.Player, this.Player.Y);
-            entities.Children.Add(this.Player);
+            TheWorld.Entities.Children.Add(this.Player);
         }
 
         void BlockTouched(Block block, int type, MouseEventArgs e)
@@ -379,15 +432,15 @@ namespace wpfcraft
                             {
                                 AnimationSelectionFade anim = new();
                                 BlockTypeSelectionChanged += (sender, EventArgs) => anim.Stop(this, EventArgs);
-                                selectionBox.BeginAnimation(OpacityProperty, anim);
+                                TheWorld.ScaledOverlay.SelectionBox.BeginAnimation(OpacityProperty, anim);
                             }
                             else if (block.Id != Player.Selection.PrevBlockId)
                             {
                                 BlockTypeSelectionChanged?.Invoke(this, e);
                             }
                             Player.Selection.PrevBlockId = block.Id;
-                            Canvas.SetLeft(selectionBox, blockX);
-                            Canvas.SetTop(selectionBox, block.Y);
+                            Canvas.SetLeft(TheWorld.ScaledOverlay.SelectionBox, blockX);
+                            Canvas.SetTop(TheWorld.ScaledOverlay.SelectionBox, block.Y);
                         }
                         break;
                     }
@@ -476,14 +529,14 @@ namespace wpfcraft
                         break;
                     }
             }
-            selectionInfo.Content = $"Selected:\n{block.X} / {block.Y}\nID: {block.Id}\nSelectionBox Pos: {Canvas.GetLeft(selectionBox)} / {Canvas.GetTop(selectionBox)}";
+            selectionInfo.Content = $"Selected:\n{block.X} / {block.Y}\nID: {block.Id}\nSelectionBox Pos: {Canvas.GetLeft(TheWorld.ScaledOverlay.SelectionBox)} / {Canvas.GetTop(TheWorld.ScaledOverlay.SelectionBox)}";
         }
 
         void UnloadOldestChunk()
         {
             List<long> list = new List<long>();
             List<Canvas> listc = new List<Canvas>();
-            foreach (Canvas chunk in chunks.Children)
+            foreach (Canvas chunk in TheWorld.Chunks.Children)
             {
                 list.Add(Convert.ToInt64(chunk.Uid));
                 long i = list.Min();
@@ -495,7 +548,7 @@ namespace wpfcraft
                         double chunkX = Canvas.GetLeft(chunk);
                         if (chunkX < Player.X - 64 || chunkX > Player.X + 64)
                         {
-                            chunks.Children.Remove(c);
+                            TheWorld.Chunks.Children.Remove(c);
                             break;
                         }
                     }
@@ -509,7 +562,7 @@ namespace wpfcraft
             int nearestPossibleX = (int)Math.Round((Player.X / 16), MidpointRounding.AwayFromZero) * 16;
             chunkGenInfo.Content = $"{nearestPossibleX}";
             bool chunkFoundAtGoaledX = false;
-            foreach(Chunk chunk in chunks.Children)
+            foreach(Chunk chunk in TheWorld.Chunks.Children)
             {
                 double x = Canvas.GetLeft(chunk);
                 if (x == nearestPossibleX)
@@ -527,13 +580,13 @@ namespace wpfcraft
                     block.MouseEnter += (sender, EventArgs) => BlockTouched(block, 0, EventArgs);
                     block.MouseDown += (sender, EventArgs) => BlockTouched(block, 1, EventArgs);
                 }
-                chunks.Children.Add(chunk);
+                TheWorld.Chunks.Children.Add(chunk);
             }
         }
 
         public void Stop(Exception e, string error, string source)
         {
-            this.world.Children.Clear();
+            TheWorld.Children.Clear();
             foreach (UIElement element in windowGrid.Children)
             {
                 if (element != uiStop)
@@ -576,7 +629,7 @@ namespace wpfcraft
 
         public void PlayerMPPosUpdated(ulong id, double x, double y)
         {
-            foreach (Player player in this.entities.Children)
+            foreach (Player player in TheWorld.Entities.Children)
             {
                 if (player.Id == id)
                 {

@@ -5,23 +5,17 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:wpfcraft"
         mc:Ignorable="d"
-        Title="WPFCraft" Height="450" Width="800" Background="#FF00E2FF" KeyDown="KeyPressed" Name="GameWindow">
+        Title="WPFCraft" Height="450" Width="800" KeyDown="KeyPressed" Name="GameWindow">
     <Grid Name="windowGrid">
+        <Canvas Name="Background" Uid="BG"></Canvas>
         <Canvas>
             <ScrollViewer Name="camera" Height="450" Width="800" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden">
-                <Canvas Name="world" Width="9223372036854775807" Height="9223372036854775807">
-                    <Canvas Name="chunks"></Canvas>
-                    <Canvas Name="entities"></Canvas>
-                    <Canvas Name="scaledOverlay">
-                        <Rectangle Name="selectionBox" Width="1" Height="1" Stroke="Black" StrokeThickness="0.05"></Rectangle>
-                    </Canvas>
-                </Canvas>
             </ScrollViewer>
         </Canvas>
         <Canvas Name="uiIngame">
             <Label Name="onScreenText" Width="520" Height="40" HorizontalAlignment="Left" VerticalAlignment="Center"></Label>
             <Label Name="blocksText" Canvas.Top="40" Width="260" Height="50"></Label>
-            <Label Name="playerInfo" Canvas.Top="100" Width="200" Height="150" HorizontalAlignment="Left" VerticalAlignment="Center"></Label>
+            <Label Name="playerInfo" Canvas.Top="100" Width="200" Height="200" HorizontalAlignment="Left" VerticalAlignment="Center"></Label>
             <Label Name="selectionInfo" Canvas.Top="300" Width="200" Height="100" HorizontalAlignment="Left" VerticalAlignment="Center"></Label>
             <Label Name="chunkGenInfo" Canvas.Left="600" Width="200" Height="90" HorizontalAlignment="Center" VerticalAlignment="Top"></Label>
             <Label Name="networkInfo" Canvas.Left="600" Canvas.Top="151" Width="200" Height="239" HorizontalAlignment="Center" VerticalAlignment="Top"></Label>

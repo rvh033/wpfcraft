@@ -13,6 +13,10 @@
     <None Remove="Texture\Block\10000.png" />
     <None Remove="Texture\Block\2.png" />
     <None Remove="Texture\Block\3.png" />
+    <None Remove="Texture\Graphics\moon0.png" />
+    <None Remove="Texture\Graphics\moon1.png" />
+    <None Remove="Texture\Graphics\moon2.png" />
+    <None Remove="Texture\Graphics\moon3.png" />
     <None Remove="Texture\MissingTex.png" />
   </ItemGroup>
 
@@ -25,6 +29,10 @@
     <Resource Include="Texture\Block\10000.png" />
     <Resource Include="Texture\Block\2.png" />
     <Resource Include="Texture\Block\3.png" />
+    <Resource Include="Texture\Graphics\moon0.png" />
+    <Resource Include="Texture\Graphics\moon1.png" />
+    <Resource Include="Texture\Graphics\moon2.png" />
+    <Resource Include="Texture\Graphics\moon3.png" />
     <Resource Include="Texture\MissingTex.png" />
   </ItemGroup>
 

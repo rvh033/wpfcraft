@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,6 +25,7 @@ namespace wpfcraft
         public double Y;
         public int Id;
         public bool IsFancy = true;
+        Rectangle LightingOverlay = new();
 
         public void Init(bool doInitFancy)
         {
@@ -37,6 +39,33 @@ namespace wpfcraft
                 case false:
                     DoSimple();
                     break;
+            }
+            if (Id != 6)
+            {
+                AddLighting();
+            }
+        }
+
+        void AddLighting()
+        {
+            LightingOverlay.Fill = Brushes.Black;
+            LightingOverlay.Width = Width + 0.02;
+            LightingOverlay.Height = Height + 0.02;
+            LightingOverlay.Opacity = World.WorldDarkness;
+            SetLeft(LightingOverlay, -0.02);
+            SetTop(LightingOverlay, -0.02);
+            Children.Add(LightingOverlay);
+        }
+
+        public void SetLighting(double light)
+        {
+            if (light < 0 || light > 1)
+            {
+                throw new OverflowException("Light cannot be less than zero or more than one.");
+            }
+            else
+            {
+                LightingOverlay.Opacity = light;
             }
         }
 
@@ -63,10 +92,10 @@ namespace wpfcraft
         {
             // Create the block with just it's color, faster than loading the texture
             Rectangle blockFace = new Rectangle();
-            blockFace.Width = (int)this.Width + 0.01;
-            blockFace.Height = (int)this.Height + 0.01;
-            SetLeft(blockFace, -0.01);
-            SetTop(blockFace, -0.01);
+            blockFace.Width = (int)this.Width + 0.02;
+            blockFace.Height = (int)this.Height + 0.02;
+            SetLeft(blockFace, -0.02);
+            SetTop(blockFace, -0.02);
             switch (Id)
             {
                 case 0:
